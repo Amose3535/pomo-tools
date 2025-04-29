@@ -1,0 +1,174 @@
+[gd_scene load_steps=3 format=3 uid="uid://m46uyvlnr4yi"]
+
+[ext_resource type="Script" path="res://Main/Scripts/main.gd" id="1_qe2nl"]
+[ext_resource type="Texture2D" uid="uid://d4gouao3dqfl7" path="res://Main/Assets/Fileicon32x.png" id="2_ledm2"]
+
+[node name="Control" type="Control"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("1_qe2nl")
+
+[node name="FilePath" type="PanelContainer" parent="."]
+self_modulate = Color(0.305882, 0.305882, 0.305882, 1)
+layout_mode = 0
+offset_right = 376.0
+offset_bottom = 68.0
+
+[node name="MarginContainer" type="MarginContainer" parent="FilePath"]
+layout_mode = 2
+theme_override_constants/margin_left = 2
+theme_override_constants/margin_top = 2
+theme_override_constants/margin_right = 2
+theme_override_constants/margin_bottom = 2
+
+[node name="Control" type="Control" parent="FilePath/MarginContainer"]
+layout_mode = 2
+
+[node name="FilePathInput" type="TextEdit" parent="FilePath/MarginContainer/Control"]
+layout_mode = 2
+offset_right = 308.0
+offset_bottom = 61.0
+placeholder_text = "Place here the CSV path of your plan"
+autowrap_mode = 1
+
+[node name="Button" type="Button" parent="FilePath/MarginContainer/Control"]
+layout_mode = 1
+anchors_preset = 11
+anchor_left = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = -62.0
+grow_horizontal = 0
+grow_vertical = 2
+disabled = true
+icon = ExtResource("2_ledm2")
+icon_alignment = 1
+
+[node name="TomatoTime" type="PanelContainer" parent="."]
+layout_mode = 1
+anchors_preset = 1
+anchor_left = 1.0
+anchor_right = 1.0
+offset_left = -137.0
+offset_bottom = 65.0
+grow_horizontal = 0
+
+[node name="Control" type="Control" parent="TomatoTime"]
+layout_mode = 2
+tooltip_text = "Time left"
+
+[node name="RichTextLabel" type="RichTextLabel" parent="TomatoTime/Control"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+bbcode_enabled = true
+text = "[color=white] [p align=center] 0h 0m 0s [/p][/color]"
+fit_content = true
+scroll_active = false
+scroll_following = true
+autowrap_mode = 0
+
+[node name="ProgressBar" type="ProgressBar" parent="TomatoTime/Control"]
+layout_mode = 1
+anchors_preset = 12
+anchor_top = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_top = -15.0
+grow_horizontal = 2
+grow_vertical = 0
+value = 100.0
+show_percentage = false
+
+[node name="Controls" type="PanelContainer" parent="."]
+layout_mode = 1
+anchors_preset = 5
+anchor_left = 0.5
+anchor_right = 0.5
+offset_left = -146.0
+offset_right = 146.0
+offset_bottom = 66.0
+grow_horizontal = 2
+
+[node name="Control" type="Control" parent="Controls"]
+layout_mode = 2
+
+[node name="TimeSlider" type="HSlider" parent="Controls/Control"]
+layout_mode = 1
+anchors_preset = 12
+anchor_top = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_top = -16.0
+grow_horizontal = 2
+grow_vertical = 0
+size_flags_vertical = 8
+step = 0.005
+value = 0.005
+
+[node name="StartButton" type="Button" parent="Controls/Control"]
+layout_mode = 1
+anchors_preset = 1
+anchor_left = 1.0
+anchor_right = 1.0
+offset_left = -113.0
+offset_bottom = 42.0
+grow_horizontal = 0
+text = "Start"
+
+[node name="Label" type="Label" parent="Controls/Control"]
+layout_mode = 1
+anchors_preset = 4
+anchor_top = 0.5
+anchor_bottom = 0.5
+offset_left = 6.0
+offset_top = -12.0
+offset_right = 91.0
+offset_bottom = 12.0
+grow_vertical = 2
+text = "0h 0m 1s"
+
+[node name="Body" type="PanelContainer" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_top = 68.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="ScrollContainer" type="ScrollContainer" parent="Body"]
+layout_mode = 2
+tooltip_text = "SCROLLER"
+follow_focus = true
+horizontal_scroll_mode = 2
+vertical_scroll_mode = 2
+
+[node name="MarginContainer" type="MarginContainer" parent="Body/ScrollContainer"]
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 3
+mouse_filter = 2
+theme_override_constants/margin_left = 5
+theme_override_constants/margin_top = 5
+theme_override_constants/margin_right = 5
+theme_override_constants/margin_bottom = 5
+
+[node name="BodyGridContainer" type="GridContainer" parent="Body/ScrollContainer/MarginContainer"]
+unique_name_in_owner = true
+layout_mode = 2
+mouse_filter = 2
+
+[node name="Timer" type="Timer" parent="."]
+one_shot = true
+
+[connection signal="text_changed" from="FilePath/MarginContainer/Control/FilePathInput" to="." method="_on_file_path_input_text_changed"]
+[connection signal="pressed" from="Controls/Control/StartButton" to="." method="_on_start_button_pressed"]
+[connection signal="timeout" from="Timer" to="." method="_on_timer_timeout"]
