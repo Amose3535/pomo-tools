@@ -1,15 +1,7 @@
-[gd_scene load_steps=5 format=3 uid="uid://m46uyvlnr4yi"]
+[gd_scene load_steps=3 format=3 uid="uid://m46uyvlnr4yi"]
 
 [ext_resource type="Script" path="res://Main/Scripts/main.gd" id="1_qe2nl"]
 [ext_resource type="Texture2D" uid="uid://d4gouao3dqfl7" path="res://Main/Assets/Fileicon32x.png" id="2_ledm2"]
-[ext_resource type="AudioStream" uid="uid://dq13ccbr3eaas" path="res://Main/Assets/ding.wav" id="3_jmv5q"]
-
-[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_m3yxa"]
-bg_color = Color(1, 1, 1, 1)
-corner_radius_top_left = 4
-corner_radius_top_right = 4
-corner_radius_bottom_right = 4
-corner_radius_bottom_left = 4
 
 [node name="Control" type="Control"]
 layout_mode = 3
@@ -19,7 +11,6 @@ anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
 script = ExtResource("1_qe2nl")
-CharSize = 8
 
 [node name="FilePath" type="PanelContainer" parent="."]
 self_modulate = Color(0.305882, 0.305882, 0.305882, 1)
@@ -53,6 +44,7 @@ anchor_bottom = 1.0
 offset_left = -62.0
 grow_horizontal = 0
 grow_vertical = 2
+disabled = true
 icon = ExtResource("2_ledm2")
 icon_alignment = 1
 
@@ -92,16 +84,8 @@ anchor_bottom = 1.0
 offset_top = -15.0
 grow_horizontal = 2
 grow_vertical = 0
-theme_override_styles/fill = SubResource("StyleBoxFlat_m3yxa")
 value = 100.0
 show_percentage = false
-
-[node name="Timer" type="Timer" parent="TomatoTime"]
-one_shot = true
-
-[node name="AudioStreamPlayer" type="AudioStreamPlayer" parent="TomatoTime"]
-stream = ExtResource("3_jmv5q")
-volume_db = 12.0
 
 [node name="Controls" type="PanelContainer" parent="."]
 layout_mode = 1
@@ -126,7 +110,8 @@ offset_top = -16.0
 grow_horizontal = 2
 grow_vertical = 0
 size_flags_vertical = 8
-step = 0.028
+step = 0.005
+value = 0.005
 
 [node name="StartButton" type="Button" parent="Controls/Control"]
 layout_mode = 1
@@ -181,96 +166,9 @@ unique_name_in_owner = true
 layout_mode = 2
 mouse_filter = 2
 
-[node name="PopupPanel" type="PanelContainer" parent="."]
-top_level = true
-visibility_layer = 1023
-layout_mode = 1
-anchors_preset = 3
-anchor_left = 1.0
-anchor_top = 1.0
-anchor_right = 1.0
-anchor_bottom = 1.0
-offset_left = -344.0
-offset_top = -95.0
-offset_right = -8.0
-offset_bottom = -8.0
-grow_horizontal = 0
-grow_vertical = 0
-mouse_filter = 1
-
-[node name="MarginContainer" type="MarginContainer" parent="PopupPanel"]
-layout_mode = 2
-theme_override_constants/margin_left = 5
-theme_override_constants/margin_top = 5
-theme_override_constants/margin_right = 5
-theme_override_constants/margin_bottom = 5
-
-[node name="VBoxContainer" type="VBoxContainer" parent="PopupPanel/MarginContainer"]
-layout_mode = 2
-theme_override_constants/separation = 32
-
-[node name="Control" type="Control" parent="PopupPanel/MarginContainer/VBoxContainer"]
-layout_mode = 2
-
-[node name="Title" type="RichTextLabel" parent="PopupPanel/MarginContainer/VBoxContainer/Control"]
-layout_mode = 2
-offset_top = -2.0
-offset_right = 326.0
-offset_bottom = 19.0
-grow_horizontal = 2
-bbcode_enabled = true
-text = "[center]title[/center]"
-scroll_active = false
-threaded = true
-
-[node name="Control2" type="Control" parent="PopupPanel/MarginContainer/VBoxContainer"]
-layout_mode = 2
-
-[node name="HSeparator" type="HSeparator" parent="PopupPanel/MarginContainer/VBoxContainer/Control2"]
-layout_mode = 1
-anchors_preset = 14
-anchor_top = 0.5
-anchor_right = 1.0
-anchor_bottom = 0.5
-offset_top = -10.0
-offset_bottom = -5.0
-grow_horizontal = 2
-grow_vertical = 2
-
-[node name="Control3" type="Control" parent="PopupPanel/MarginContainer/VBoxContainer"]
-layout_mode = 2
-
-[node name="Body" type="RichTextLabel" parent="PopupPanel/MarginContainer/VBoxContainer/Control3"]
-layout_mode = 1
-anchors_preset = 14
-anchor_top = 0.5
-anchor_right = 1.0
-anchor_bottom = 0.5
-offset_top = -37.0
-offset_bottom = 3.0
-grow_horizontal = 2
-grow_vertical = 2
-bbcode_enabled = true
-text = "[center]body[/center]
-"
-scroll_active = false
-threaded = true
-
-[node name="FileDialog" type="FileDialog" parent="."]
-title = "Open a File"
-position = Vector2i(0, 36)
-size = Vector2i(452, 159)
-always_on_top = true
-ok_button_text = "Apri"
-file_mode = 0
-access = 2
-filters = PackedStringArray("*.csv", "*.*")
-show_hidden_files = true
-use_native_dialog = true
+[node name="Timer" type="Timer" parent="."]
+one_shot = true
 
 [connection signal="text_changed" from="FilePath/MarginContainer/Control/FilePathInput" to="." method="_on_file_path_input_text_changed"]
-[connection signal="text_set" from="FilePath/MarginContainer/Control/FilePathInput" to="." method="_on_file_path_input_text_set"]
-[connection signal="pressed" from="FilePath/MarginContainer/Control/Button" to="." method="_on_button_pressed"]
-[connection signal="timeout" from="TomatoTime/Timer" to="." method="_on_timer_timeout"]
 [connection signal="pressed" from="Controls/Control/StartButton" to="." method="_on_start_button_pressed"]
-[connection signal="file_selected" from="FileDialog" to="." method="_on_file_dialog_file_selected"]
+[connection signal="timeout" from="Timer" to="." method="_on_timer_timeout"]

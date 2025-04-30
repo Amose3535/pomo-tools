@@ -1,35 +1,91 @@
 extends Control
 
 @export var save_file_name : String = "LastFile"
+@export var notifier_path : String = "res://Main/Scripts/Powershell/notify.ps1"
+@export var notification_x_offset : int = 100
+@export var CharSize : int = 10
+@export var Frasi : Array[String] = [
+	"Vai a bere un bicchiere d'acqua bro",
+	"Alzati e fai stretching",
+	"Fatti un giretto di 2 minuti",
+	"Controlla se hai bisogno di mangiare",
+	"Sbircia fuori dalla finestra per sgranchire gli occhi",
+	"Respira profondo, ricarica la mente.",
+	"Stai spaccando. Continua così.",
+	"Pausa meritata, boss!",
+	"Anche i razzi hanno bisogno di rifornimento. 🔥",
+	"Stacca un attimo gli occhi dallo schermo 👀",
+	"Fatti due passi, poi torni più forte.",
+	"Un break intelligente vale più di 10 minuti a vuoto.",
+	"Stretch it out! 💪",
+	"Idratati bro. Acqua = cervello turbo. 🧠💧",
+	"Sei a un passo dal next level, respira e vai!",
+	"Pausa tattica → ritorno epico garantito."]
+
+#region ONREADYs
+@onready var file_path_input = $FilePath/MarginContainer/Control/FilePathInput
+@onready var file_button = $FilePath/MarginContainer/Control/Button
+@onready var file_dialog = $FileDialog
 
 @onready var controls = $Controls
-@onready var file_path_input = $FilePath/MarginContainer/Control/FilePathInput
-@onready var timer = $Timer
+
+@onready var timer = $TomatoTime/Timer
 @onready var time_slider = $Controls/Control/TimeSlider
 @onready var time_slider_label = $Controls/Control/Label
+
 @onready var time_left_label = $TomatoTime/Control/RichTextLabel
 @onready var time_left_bar = $TomatoTime/Control/ProgressBar
+@onready var audio_stream_player = $TomatoTime/AudioStreamPlayer
+
 @onready var grid_container = %BodyGridContainer
 
-const MAX_TIME_S : int = 18000
+@onready var popup_panel : PanelContainer = $PopupPanel
+@onready var popup_title = $PopupPanel/MarginContainer/VBoxContainer/Control/Title
+@onready var popup_body = $PopupPanel/MarginContainer/VBoxContainer/Control3/Body
 
 
+
+
+
+@onready var notif_pos : Vector2 = Vector2()
+#endregion
+
+const MAX_TIME_S : int = 3600
 
 var session_started : bool = false
 var last_csv : String = ""
 
+func _notification(what):
+	if what == NOTIFICATION_WM_CLOSE_REQUEST:
+		if !session_started:
+			get_tree().quit()
+
+
 func _ready():
+	randomize()
+	notif_pos = popup_panel.position
+	popup_panel.position.x=popup_panel.position.x+popup_panel.size.x
 	last_csv = retrieve_path(save_file_name)
 	file_path_input.text = last_csv
+	file_dialog.current_dir = last_csv.get_base_dir()
 	populate_grid_from_csv_excel_style(last_csv)
+
 
 # Called every frame. 'delta' is the elapsed time since the previous frame.
 func _process(_delta):
 	if controls.visible:
 		time_slider_label.text = format_time((time_slider.value/100)*MAX_TIME_S)
 	if session_started:
-		time_left_label.text = "[color=white] [p align=center]" + format_time(timer.time_left)
+		get_tree().auto_accept_quit = false
+		time_left_label.text = "[color="+get_timer_color_hex(time_left_bar.value/100)+"] [p align=center]" + format_time(timer.time_left)
 		time_left_bar.value = (timer.time_left/timer.wait_time)*100
+		var style = time_left_bar.get_theme_stylebox("fill", "ProgressBar")
+		if style is StyleBoxFlat:
+			style.bg_color = Color(get_timer_color_hex(time_left_bar.value/100))  # Rosso, ad esempio
+			time_left_bar.add_theme_stylebox_override("fill",style)
+	else:
+		get_tree().auto_accept_quit = true
+
 
 func format_time(seconds: int) -> String:
 	@warning_ignore("integer_division")
@@ -38,6 +94,25 @@ func format_time(seconds: int) -> String:
 	var m = (seconds % 3600) / 60
 	var s = seconds % 60
 	return str(h) + "h " + str(m) + "m " + str(s) + "s"
+
+
+func get_timer_color_hex(progress: float) -> String:
+	# Se siamo sopra al 30% → bianco puro
+	if progress > 0.3:
+		return "#FFFFFF"
+
+	# Calcola quanto "rosso" diventare da 30% a 0%
+	var factor = clamp(progress / 0.3, 0.0, 1.0)
+	factor = 1.0 - factor  # progress: 0.3 → 0.0 → factor: 0 → 1
+
+	var green_blue = int(clamp(255.0 * (1.0 - factor), 0, 255))  # da 255 a 0
+
+	var r = 255
+	var g = green_blue
+	var b = green_blue
+
+	return "#%02X%02X%02X" % [r, g, b]
+
 
 func create_bordered_label(text: String) -> PanelContainer:
 	var panel = PanelContainer.new()
@@ -75,44 +150,151 @@ func create_bordered_label(text: String) -> PanelContainer:
 	return panel
 
 
+# Funzione helper interna per creare cella scalata
+func create_scaled_label(text: String, width_multiplier: int, color : String = "white") -> PanelContainer:
+	var panel = PanelContainer.new()
+	panel.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	panel.size_flags_vertical = Control.SIZE_FILL
+	
+	# Stima: 10px a carattere + margine
+	var width = width_multiplier * CharSize + 20
+	panel.custom_minimum_size = Vector2(width, 30)
 
+	panel.mouse_filter = Control.MOUSE_FILTER_PASS
+
+	var label = RichTextLabel.new()
+	
+	if color != "white" or color !="#FFFFFF":
+		text = "[color="+color+"]"+text+"[/color]"
+	label.text = "[p align=center]"+text+"[/p]"
+	label.threaded = true
+	label.bbcode_enabled = true
+	label.tooltip_text = text
+	label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	label.size_flags_vertical = Control.SIZE_FILL
+	label.autowrap_mode = TextServer.AUTOWRAP_OFF
+	label.mouse_filter = Control.MOUSE_FILTER_STOP
+
+	panel.add_child(label)
+
+	var style = StyleBoxFlat.new()
+	style.bg_color = Color(0.8, 0.8, 0.8, 0)
+	style.border_color = Color(0, 0, 0)
+	style.border_width_top = 1  # 1px bordo
+	style.border_width_bottom = 1  # 1px bordo
+	style.border_width_left = 1  # 1px bordo
+	style.border_width_right = 1  # 1px bordo
+	panel.add_theme_stylebox_override("panel", style)
+
+	return panel
 
 
 func populate_grid_from_csv_excel_style(file_path: String) -> void:
 	var dimensions = get_csv_dimensions(file_path)
 	var _rows = int(dimensions.x)
 	var columns = int(dimensions.y)
-	
-	grid_container.columns = columns + 1  # +1 per indice numerico
-	
+
+	grid_container.columns = columns + 1  # +1 per la colonna indici
+
 	# Pulisce la griglia prima
 	for child in grid_container.get_children():
 		child.queue_free()
-	
+
 	var data = read_csv_as_dict(file_path)
-	
-	# PRIMA RIGA: intestazioni
-	grid_container.add_child(create_bordered_label(""))  # Vuoto in alto a sinistra
-	
+
+	# Prima cosa: calcolo la larghezza ideale per ogni colonna
+	var max_char_per_column = {}  # dizionario header -> max chars
+
+	if data.size() > 0:
+		@warning_ignore("confusable_local_declaration")
+		var headers = data[0].keys()
+
+		# Inizializza max per header
+		for header in headers:
+			max_char_per_column[header] = header.length()
+
+		# Gira su tutti i record
+		for row in data:
+			for key in headers:
+				var text_length = row[key].length()
+				if text_length > max_char_per_column[key]:
+					max_char_per_column[key] = text_length
+
+	# -- costruiamo la griglia --
+
+	# Prima riga: intestazioni
+	grid_container.add_child(create_scaled_label("", 3))  # cella vuota in alto a sinistra
+
 	var headers = []
 	if data.size() > 0:
 		headers = data[0].keys()
 		for header in headers:
-			var header_label = create_bordered_label(header)
-			var label_node = header_label.get_child(0)
-			label_node.add_theme_color_override("font_color", Color(0.2, 0.6, 1))  # Testo blu
-			grid_container.add_child(header_label)
-	
-	# RIGHE DATI
+			grid_container.add_child(create_scaled_label(header, max_char_per_column[header], "#3399FF"))
+
+	# Righe dati
 	for i in range(data.size()):
-		var row_label = create_bordered_label(str(i + 1))
-		var label_node = row_label.get_child(0)
-		label_node.add_theme_color_override("font_color", Color(0.8, 0.4, 0.2))  # Indice colorato
-		grid_container.add_child(row_label)
-		
+		grid_container.add_child(create_scaled_label(str(i + 1), 3, "#CC6633"))  # Indice numerico fisso
+
 		for key in headers:
-			var data_label = create_bordered_label(data[i][key])
-			grid_container.add_child(data_label)
+			grid_container.add_child(create_scaled_label(data[i][key], max_char_per_column[key]))
+
+
+# OLD WAY - KEPT FOR COMPARISONS. IGNORE PLEASE
+#func populate_grid_from_csv_excel_style(file_path: String) -> void:
+#	var dimensions = get_csv_dimensions(file_path)
+#	var _rows = int(dimensions.x)
+#	var columns = int(dimensions.y)
+#	var columns = int(dimensions.y)
+#	
+#	grid_container.columns = columns + 1  # +1 per indice numerico
+#	
+#	# Pulisce la griglia prima
+#	for child in grid_container.get_children():
+#		child.queue_free()
+#	
+#	var data = read_csv_as_dict(file_path)
+#	
+#	
+#	
+#	# PRIMA RIGA: intestazioni
+#	grid_container.add_child(create_bordered_label(""))  # Vuoto in alto a sinistra
+#	
+#	var headers = []
+#	if data.size() > 0:
+#		headers = data[0].keys()
+#		for header in headers:
+#			var header_label = create_bordered_label(header)
+#			var label_node = header_label.get_child(0)
+#			label_node.add_theme_color_override("font_color", Color(0.2, 0.6, 1))  # Testo blu
+#			grid_container.add_child(header_label)
+#	
+#	# RIGHE DATI
+#	for i in range(data.size()):
+#		var row_label = create_bordered_label(str(i + 1))
+#		var label_node = row_label.get_child(0)
+#		label_node.add_theme_color_override("font_color", Color(0.8, 0.4, 0.2))  # Indice colorato
+#		grid_container.add_child(row_label)
+#		
+#		for key in headers:
+#			var data_label = create_bordered_label(data[i][key])
+#			grid_container.add_child(data_label)
+
+
+func push_notification(title : String, message : String, time_s : float = 3) -> int:
+	var ease_time : float = 0.5
+	print_debug("A notification has been pushed!\nTitle: %s\nMessage: %s\nFor %ss"%[title,message,str(time_s)])
+	popup_title.text = "[center]"+title+"[/center]"
+	popup_body.text = "[center]"+message+"[/center]"
+	popup_panel.position = Vector2(notif_pos.x+popup_panel.size.x+notification_x_offset,notif_pos.y)
+	var modulate_tweener : Tween = create_tween()
+	modulate_tweener.set_ease(Tween.EASE_IN_OUT)
+	modulate_tweener.tween_property(popup_panel,"position",notif_pos,ease_time)
+	await modulate_tweener.finished
+	await get_tree().create_timer(time_s).timeout
+	var modulate_tweener_back : Tween = create_tween()
+	modulate_tweener_back.set_ease(Tween.EASE_IN_OUT)
+	modulate_tweener_back.tween_property(popup_panel,"position",Vector2(notif_pos.x+popup_panel.size.x+notification_x_offset,notif_pos.y), ease_time)
+	return 0 
 
 
 func _on_start_button_pressed():
@@ -122,13 +304,23 @@ func _on_start_button_pressed():
 		timer.start()
 		controls.hide() # Removes the ability to start another timer.
 		file_path_input.editable = false  # Removes the ability to change the file
-		print("INFO | TIME STARTED WITH ",timer.wait_time," SECONDS")
+		file_button.disabled = true
+		await push_notification("🍅 Pomodoro iniziato! ⏲️","Tempo impostato a: %s"%format_time(timer.wait_time),1)
+		print_debug("INFO | TIME STARTED WITH ",timer.wait_time," SECONDS")
 	else:
+		session_started = false
 		push_warning("WARNING | NO FILE \""+file_path_input.text+"\" FOUND!")
 
+
 func _on_timer_timeout():
+	session_started = false
 	controls.show() # Re-gives the ability to see the controls
 	file_path_input.editable = true # Allows the user to edit the csv file
+	file_button.disabled = false
+	audio_stream_player.play()
+	DisplayServer.window_request_attention()
+	get_window().grab_focus()
+	await push_notification("⏲️ Tempo scaduto!",Frasi.pick_random())
 	print("INFO | TIME ENDED AFTER "+str(timer.wait_time)+" SECONDS!")
 
 
@@ -137,11 +329,13 @@ func _on_file_path_input_text_changed():
 		save_path(save_file_name,file_path_input.text)
 		populate_grid_from_csv_excel_style(file_path_input.text)
 
+
 func save_path(file_name: String, txt: String) -> void:
 	var file = FileAccess.open("user://"+file_name, FileAccess.WRITE)
 	if file:
 		file.store_string(txt)
 		file.close()
+
 
 func retrieve_path(file_name: String) -> String:
 	if FileAccess.file_exists("user://"+file_name):
@@ -151,6 +345,7 @@ func retrieve_path(file_name: String) -> String:
 		return txt
 	else:
 		return ""  # File non trovato, restituisce stringa vuota
+
 
 func get_csv_dimensions(file_path: String) -> Vector2:
 	var row_count = 0
@@ -187,3 +382,18 @@ func read_csv_as_dict(file_path: String) -> Array:
 		file.close()
 	return data
 
+
+func _on_button_pressed():
+	print_debug("File Button pressed!")
+	file_dialog.popup()
+
+
+func _on_file_dialog_file_selected(path):
+	print_debug("File Chosen!")
+	file_path_input.text = path
+
+
+func _on_file_path_input_text_set():
+	if FileAccess.file_exists(file_path_input.text):
+		save_path(save_file_name,file_path_input.text)
+		populate_grid_from_csv_excel_style(file_path_input.text)

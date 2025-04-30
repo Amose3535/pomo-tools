@@ -1,0 +1,15 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "type": "PowerShell",
+            "request": "launch",
+            "name": "Debug notify.ps1",
+            "script": "${workspaceFolder}/Main/Scripts/Powershell/notify.ps1",
+            "args": [
+                "-title", "Debug Title",
+                "-message", "Debug Message"
+            ]
+        }
+    ]
+}

@@ -53,6 +53,7 @@ anchor_bottom = 1.0
 offset_left = -62.0
 grow_horizontal = 0
 grow_vertical = 2
+disabled = true
 icon = ExtResource("2_ledm2")
 icon_alignment = 1
 
@@ -191,7 +192,7 @@ anchor_top = 1.0
 anchor_right = 1.0
 anchor_bottom = 1.0
 offset_left = -344.0
-offset_top = -95.0
+offset_top = -84.0
 offset_right = -8.0
 offset_bottom = -8.0
 grow_horizontal = 0
@@ -256,21 +257,6 @@ text = "[center]body[/center]
 scroll_active = false
 threaded = true
 
-[node name="FileDialog" type="FileDialog" parent="."]
-title = "Open a File"
-position = Vector2i(0, 36)
-size = Vector2i(452, 159)
-always_on_top = true
-ok_button_text = "Apri"
-file_mode = 0
-access = 2
-filters = PackedStringArray("*.csv", "*.*")
-show_hidden_files = true
-use_native_dialog = true
-
 [connection signal="text_changed" from="FilePath/MarginContainer/Control/FilePathInput" to="." method="_on_file_path_input_text_changed"]
-[connection signal="text_set" from="FilePath/MarginContainer/Control/FilePathInput" to="." method="_on_file_path_input_text_set"]
-[connection signal="pressed" from="FilePath/MarginContainer/Control/Button" to="." method="_on_button_pressed"]
 [connection signal="timeout" from="TomatoTime/Timer" to="." method="_on_timer_timeout"]
 [connection signal="pressed" from="Controls/Control/StartButton" to="." method="_on_start_button_pressed"]
-[connection signal="file_selected" from="FileDialog" to="." method="_on_file_dialog_file_selected"]
