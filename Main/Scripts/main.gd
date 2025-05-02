@@ -1,5 +1,6 @@
 extends Control
 
+#region Exports
 @export var save_file_name : String = "LastFile"
 @export var notifier_path : String = "res://Main/Scripts/Powershell/notify.ps1"
 @export var notification_x_offset : int = 100
@@ -21,8 +22,15 @@ extends Control
 	"Idratati bro. Acqua = cervello turbo. 🧠💧",
 	"Sei a un passo dal next level, respira e vai!",
 	"Pausa tattica → ritorno epico garantito."]
+@export var MAX_TIME_S : int = 6000
+@export var tomato_time_s : int = 25*60
+@export var break_time_s : int = 5*60
+#endregion
+
 
 #region ONREADYs
+@onready var debug_button = load("res://Main/Scenes/DebugButton.tscn")
+
 @onready var file_path_input = $FilePath/MarginContainer/Control/FilePathInput
 @onready var file_button = $FilePath/MarginContainer/Control/Button
 @onready var file_dialog = $FileDialog
@@ -30,6 +38,7 @@ extends Control
 @onready var controls = $Controls
 
 @onready var timer = $TomatoTime/Timer
+@onready var break_timer = $TomatoTime/BreakTimer
 @onready var time_slider = $Controls/Control/TimeSlider
 @onready var time_slider_label = $Controls/Control/Label
 
@@ -45,12 +54,11 @@ extends Control
 
 
 
-
+@onready var time_left_s : int = 0
 
 @onready var notif_pos : Vector2 = Vector2()
 #endregion
 
-const MAX_TIME_S : int = 3600
 
 var session_started : bool = false
 var last_csv : String = ""
@@ -69,22 +77,37 @@ func _ready():
 	file_path_input.text = last_csv
 	file_dialog.current_dir = last_csv.get_base_dir()
 	populate_grid_from_csv_excel_style(last_csv)
+	debug_btn()
 
 
 # Called every frame. 'delta' is the elapsed time since the previous frame.
 func _process(_delta):
 	if controls.visible:
-		time_slider_label.text = format_time((time_slider.value/100)*MAX_TIME_S)
+		time_slider_label.text = format_tomato_time((time_slider.value / 100.0) * MAX_TIME_S)
+
 	if session_started:
 		get_tree().auto_accept_quit = false
-		time_left_label.text = "[color="+get_timer_color_hex(time_left_bar.value/100)+"] [p align=center]" + format_time(timer.time_left)
-		time_left_bar.value = (timer.time_left/timer.wait_time)*100
+		time_left_label.text = "[color=" + get_timer_color_hex(time_left_bar.value / 100.0) + "] [p align=center]" + format_time(timer.time_left)
+		time_left_bar.value = (timer.time_left / timer.wait_time) * 100
+
 		var style = time_left_bar.get_theme_stylebox("fill", "ProgressBar")
 		if style is StyleBoxFlat:
-			style.bg_color = Color(get_timer_color_hex(time_left_bar.value/100))  # Rosso, ad esempio
-			time_left_bar.add_theme_stylebox_override("fill",style)
+			style.bg_color = Color(get_timer_color_hex(time_left_bar.value / 100.0))
+			time_left_bar.add_theme_stylebox_override("fill", style)
+	elif break_timer.is_stopped() == false:
+		# Durante la pausa
+		time_left_label.text = "[color=#66CCFF][p align=center]Pausa: " + format_time(break_timer.time_left) + "[/p][/color]"
+		time_left_bar.value = (break_timer.time_left / break_timer.wait_time) * 100
+
+		var style = time_left_bar.get_theme_stylebox("fill", "ProgressBar")
+		if style is StyleBoxFlat:
+			style.bg_color = Color("#66CCFF")  # Colore azzurro "pausa"
+			time_left_bar.add_theme_stylebox_override("fill", style)
 	else:
 		get_tree().auto_accept_quit = true
+		time_left_label.text = "[center]0h 0m 0s[/center]"
+		time_left_bar.value = 0
+
 
 
 func format_time(seconds: int) -> String:
@@ -94,6 +117,14 @@ func format_time(seconds: int) -> String:
 	var m = (seconds % 3600) / 60
 	var s = seconds % 60
 	return str(h) + "h " + str(m) + "m " + str(s) + "s"
+
+
+func format_tomato_time(seconds: float) -> String:
+	var m := seconds / 60.0
+	var tnum = round(m / 25.0)  # Arrotonda al pomodoro più vicino
+	var label := str(tnum) + (" pomodoro" if (tnum == 1) else " pomodori")
+	label += " (" + str(round(m)) + " min.)"
+	return label
 
 
 func get_timer_color_hex(progress: float) -> String:
@@ -294,14 +325,15 @@ func push_notification(title : String, message : String, time_s : float = 3) -> 
 	var modulate_tweener_back : Tween = create_tween()
 	modulate_tweener_back.set_ease(Tween.EASE_IN_OUT)
 	modulate_tweener_back.tween_property(popup_panel,"position",Vector2(notif_pos.x+popup_panel.size.x+notification_x_offset,notif_pos.y), ease_time)
+	await modulate_tweener_back.finished
 	return 0 
 
 
 func _on_start_button_pressed():
+	time_left_s = (time_slider.value / 100.0) * MAX_TIME_S
 	if FileAccess.file_exists(file_path_input.text):
 		session_started = true
-		timer.wait_time = (time_slider.value/100)*MAX_TIME_S # gets the time chosen by the user
-		timer.start()
+		timer.start(tomato_time_s)
 		controls.hide() # Removes the ability to start another timer.
 		file_path_input.editable = false  # Removes the ability to change the file
 		file_button.disabled = true
@@ -309,20 +341,48 @@ func _on_start_button_pressed():
 		print_debug("INFO | TIME STARTED WITH ",timer.wait_time," SECONDS")
 	else:
 		session_started = false
+		push_notification("⚠️ FILE NON TROVATO ⚠️","| NO FILE \""+file_path_input.text+"\" FOUND!",6)
 		push_warning("WARNING | NO FILE \""+file_path_input.text+"\" FOUND!")
 
 
 func _on_timer_timeout():
-	session_started = false
-	controls.show() # Re-gives the ability to see the controls
-	file_path_input.editable = true # Allows the user to edit the csv file
-	file_button.disabled = false
-	audio_stream_player.play()
-	DisplayServer.window_request_attention()
-	get_window().grab_focus()
-	await push_notification("⏲️ Tempo scaduto!",Frasi.pick_random())
+	time_left_s -= tomato_time_s
+	print("TIME_LEFT_S =" + str(time_left_s))
+	if time_left_s <= 0:
+		session_started = false
+		controls.show() # Re-gives the ability to see the controls
+		file_path_input.editable = true # Allows the user to edit the csv file
+		file_button.disabled = false
+		audio_stream_player.play()
+		DisplayServer.window_request_attention()
+		get_window().grab_focus()
+		await push_notification("🎉 Sessione terminata!", Frasi.pick_random())
+	else:
+		session_started = false
+		await push_notification("⏲️ Pomodoro terminato!", Frasi.pick_random())
+		start_break(break_time_s)
 	print("INFO | TIME ENDED AFTER "+str(timer.wait_time)+" SECONDS!")
 
+
+func start_break(break_time : int = 5*60):
+	break_timer.wait_time = break_time
+	break_timer.start()
+	await push_notification("⌚ Pausa iniziata!", "Prenditi una pausa!")
+
+
+func _on_break_timer_timeout():
+	audio_stream_player.play()
+	await push_notification("🔥 Pausa terminata!","Crush that work!")
+	session_started = true 
+	if time_left_s > 0:
+		timer.start(tomato_time_s)
+	else:
+		await push_notification("Sessione terminata!","Ottimo lavoro")
+
+
+func _on_time_slider_drag_ended(value_changed : bool):
+	if value_changed: # value_changed is a bool used to check if the previous time_slider.value is the same as the new one
+		time_left_s = (time_slider.value/100.0)*MAX_TIME_S
 
 func _on_file_path_input_text_changed():
 	if FileAccess.file_exists(file_path_input.text):
@@ -397,3 +457,19 @@ func _on_file_path_input_text_set():
 	if FileAccess.file_exists(file_path_input.text):
 		save_path(save_file_name,file_path_input.text)
 		populate_grid_from_csv_excel_style(file_path_input.text)
+
+
+func debug_btn() -> void:
+	# Pulsante DEBUG per saltare pomodoro
+	var button_instance = (debug_button as PackedScene).instantiate()
+	add_child(button_instance)
+
+	button_instance.pressed.connect(func():
+		if session_started:
+			print_debug("DEBUG | Pomodoro saltato manualmente")
+			_on_timer_timeout()
+		else:
+			print_debug("DEBUG | Nessuna sessione attiva.\nDEBUG | Tento di skippare la pausa.")
+			_on_break_timer_timeout()
+			)
+

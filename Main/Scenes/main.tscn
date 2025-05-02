@@ -103,6 +103,8 @@ one_shot = true
 stream = ExtResource("3_jmv5q")
 volume_db = 12.0
 
+[node name="BreakTimer" type="Timer" parent="TomatoTime"]
+
 [node name="Controls" type="PanelContainer" parent="."]
 layout_mode = 1
 anchors_preset = 5
@@ -126,7 +128,8 @@ offset_top = -16.0
 grow_horizontal = 2
 grow_vertical = 0
 size_flags_vertical = 8
-step = 0.028
+step = 25.0
+ticks_on_borders = true
 
 [node name="StartButton" type="Button" parent="Controls/Control"]
 layout_mode = 1
@@ -272,5 +275,7 @@ use_native_dialog = true
 [connection signal="text_set" from="FilePath/MarginContainer/Control/FilePathInput" to="." method="_on_file_path_input_text_set"]
 [connection signal="pressed" from="FilePath/MarginContainer/Control/Button" to="." method="_on_button_pressed"]
 [connection signal="timeout" from="TomatoTime/Timer" to="." method="_on_timer_timeout"]
+[connection signal="timeout" from="TomatoTime/BreakTimer" to="." method="_on_break_timer_timeout"]
+[connection signal="drag_ended" from="Controls/Control/TimeSlider" to="." method="_on_time_slider_drag_ended"]
 [connection signal="pressed" from="Controls/Control/StartButton" to="." method="_on_start_button_pressed"]
 [connection signal="file_selected" from="FileDialog" to="." method="_on_file_dialog_file_selected"]

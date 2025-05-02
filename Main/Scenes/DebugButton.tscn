@@ -1,0 +1,13 @@
+[gd_scene format=3 uid="uid://b67cte6p3fkxp"]
+
+[node name="DebugButton" type="Button"]
+custom_minimum_size = Vector2(150, 40)
+anchors_preset = 2
+anchor_top = 1.0
+anchor_bottom = 1.0
+offset_top = -60.0
+offset_right = 188.0
+grow_vertical = 0
+size_flags_horizontal = 3
+size_flags_vertical = 3
+text = "⏩ Salta Pomodoro"
